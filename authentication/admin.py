@@ -7,7 +7,7 @@ from .forms import UserAdminCreationForm, UserAdminChangeForm
 
 # Register your models here.
 from django.contrib.auth import get_user_model
-User = get_user_model()
+User = get_user_model
 
 # unregister group model
 admin.site.unregister(Group)
