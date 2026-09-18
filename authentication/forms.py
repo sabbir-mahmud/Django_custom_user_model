@@ -1,13 +1,27 @@
 # imports
 from django import forms
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
 # user register form
 User = get_user_model()
 
 
-class RegisterForm(forms.ModelForm):
+class PasswordValidationMixin:
+    # enforce AUTH_PASSWORD_VALIDATORS, like Django's UserCreationForm.
+    # Runs in _post_clean so the instance already has the submitted
+    # email/name for UserAttributeSimilarityValidator.
+    def _post_clean(self):
+        super()._post_clean()
+        password = self.cleaned_data.get('password2')
+        if password:
+            try:
+                password_validation.validate_password(password, self.instance)
+            except forms.ValidationError as error:
+                self.add_error('password2', error)
+
+
+class RegisterForm(PasswordValidationMixin, forms.ModelForm):
     # password input
     password = forms.CharField(widget=forms.PasswordInput())
     password2 = forms.CharField(
@@ -33,7 +47,7 @@ class RegisterForm(forms.ModelForm):
     # set password
     def save(self, commit=True):
 
-        user = super(RegisterForm, self).save(commit=False)
+        user = super().save(commit=False)
         user.set_password(self.cleaned_data['password2'])
         if commit:
             user.save()
@@ -42,7 +56,7 @@ class RegisterForm(forms.ModelForm):
 # super user crete form
 
 
-class UserAdminCreationForm(forms.ModelForm):
+class UserAdminCreationForm(PasswordValidationMixin, forms.ModelForm):
     # password input
     password = forms.CharField(widget=forms.PasswordInput())
     password2 = forms.CharField(

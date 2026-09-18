@@ -1,7 +1,6 @@
 # imports
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from django.contrib.auth import get_user_model
 
 # Create your models here.
 
@@ -10,29 +9,25 @@ from django.contrib.auth import get_user_model
 
 class UserManager(BaseUserManager):
     # create user
-    def create_user(self, email, password=None):
+    def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Enter a valid email')
 
-        user = self.model(email=self.normalize_email(email))
+        user = self.model(email=self.normalize_email(email), **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
     # create staff user
-    def create_staffuser(self, email, password=None):
-        user = self.create_user(email, password)
-        user.staff = True
-        user.save(using=self._db)
-        return user
+    def create_staffuser(self, email, password=None, **extra_fields):
+        extra_fields['staff'] = True
+        return self.create_user(email, password, **extra_fields)
 
     # create super user / admin
-    def create_superuser(self, email, password=None):
-        user = self.create_user(email, password)
-        user.staff = True
-        user.admin = True
-        user.save(using=self._db)
-        return user
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields['staff'] = True
+        extra_fields['admin'] = True
+        return self.create_user(email, password, **extra_fields)
 
 # user model
 
@@ -52,29 +47,27 @@ class User(AbstractBaseUser):
 
     # username replaced with email
     USERNAME_FIELD = 'email'
+    EMAIL_FIELD = 'email'
     REQUIRED_FIELDS = []
 
-    object = UserManager()
+    objects = UserManager()
 
     def __str__(self):
         return self.email
 
+    # There is no per-object permission system on this model, so only
+    # admins hold permissions. Staff users can log in to the admin site
+    # but cannot view or change anything unless they are also admins.
     def has_perm(self, perm, obj=None):
-        return True
+        return self.is_active and self.admin
 
     def has_module_perms(self, app_label):
-        return True
+        return self.is_active and self.admin
 
     @property
     def is_staff(self):
-        if self.staff == True:
-            return True
-        else:
-            return False
+        return self.staff
 
     @property
     def is_superuser(self):
-        if self.admin == True:
-            return True
-        else:
-            return False
+        return self.admin

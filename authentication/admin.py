@@ -1,6 +1,5 @@
 # imports
 from django.contrib import admin
-from .models import *
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from .forms import UserAdminCreationForm, UserAdminChangeForm
@@ -40,7 +39,3 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ['email']
     ordering = ['email']
     filter_horizontal = ()
-
-    class Meta:
-        model = User
-        fields = ['email']
